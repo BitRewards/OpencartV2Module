@@ -48,21 +48,25 @@
 ]]></add>
         </operation>
     </file>
-    <file path="catalog/controller/total/voucher.php">
+    <file path="catalog/controller/extension/total/voucher.php">
         <operation>
             <search><![CDATA[$json = array();]]></search>
             <add position="before"><![CDATA[if(isset($this->request->post['voucher']) && (strripos($this->request->post['voucher'], $this->config->get('giftd_prefix')) !== false)){
-            $this->load->model('total/voucher');
+            $this->load->model('extension/total/voucher');
             
                 $giftd_data = file_get_contents('http://api.giftd.ru/v1/gift/check?token=' . $this->request->post['voucher'] . '&api_key=' . $this->config->get('giftd_api_key'));
+				
                 $giftd_data = json_decode($giftd_data);
 
+			
                 if($giftd_data->type == 'data'){
                     $min_total = $giftd_data->data->min_amount_total;
                     $this->session->data['min_girtd_total'] = $min_total;
                     $discount  = $giftd_data->data->cannot_be_used_on_discounted_items;
                     $available = $giftd_data->data->amount_available;
-                    
+                    if ($available == 0) {
+						$available = 1;
+					}
                     $data = array(
                         'code'=>$this->request->post['voucher'],
                         'from_name'=>'giftd',
@@ -75,16 +79,15 @@
                     );
                     
                     if(!$min_total){
-                        $this->model_total_voucher->add_giftd_vaucher($data, $this->session->data['total_giftd']);
+                        $this->model_extension_total_voucher->add_giftd_vaucher($data, $this->session->data['total_giftd']);
                     }elseif($min_total <= $this->session->data['total_giftd']){
                         if(!$discount){
-                            $this->model_total_voucher->add_giftd_vaucher($data, $this->session->data['total_giftd']); 
+                            $this->model_extension_total_voucher->add_giftd_vaucher($data, $this->session->data['total_giftd']); 
                         }elseif($discount && !$this->session->data['discount_giftd']){
-                            $this->model_total_voucher->add_giftd_vaucher($data, $this->session->data['total_giftd']);
+                            $this->model_extension_total_voucher->add_giftd_vaucher($data, $this->session->data['total_giftd']);
                         }
                     }else{
-                        $this->load->model('total/voucher');
-                        $this->model_total_voucher->remove_vaucher($this->request->post['voucher']);
+                        $this->model_extension_total_voucher->remove_vaucher($this->request->post['voucher']);
                 
                         unset($this->session->data['voucher']);
                     }
@@ -122,7 +125,7 @@
             }]]></add>
         </operation>
         <operation>
-            <search><![CDATA[foreach ($total_data as $key => $value) {]]></search>
+            <search><![CDATA[foreach ($totals as $key => $value) {]]></search>
             <add position="before"><![CDATA[ $this->session->data['total_giftd'] = $total;]]></add>
         </operation>
     </file>
@@ -140,7 +143,7 @@
             if($giftd_data->type == 'error'){
                 $this->session->data['error_voucher'] = 1;
                 
-                $this->load->model('total/voucher');
+                $this->load->model('extension/total/voucher');
                 
                 unset($this->session->data['voucher']);
 
@@ -149,11 +152,11 @@
             }]]></add>
         </operation>
     </file>
-    <file path="catalog/model/total/voucher.php">
+    <file path="catalog/model/extension/total/voucher.php">
         <operation>
-            <search><![CDATA[class ModelTotalVoucher extends Model {]]></search>
+            <search><![CDATA[class ModelExtensionTotalVoucher extends Model {]]></search>
             <add position="after"><![CDATA[    public function add_giftd_vaucher($data, $amount_total) {
-        $this->load->model('total/voucher');
+        $this->load->model('extension/total/voucher');
         
         $this->session->data['amount_available'] = $data['amount'];
         $this->session->data['amount_total'] = $amount_total;
@@ -184,7 +187,7 @@
         <operation>
             <search><![CDATA[<body class="<?php echo $class; ?>">]]></search>
             <add position="after"><![CDATA[<script type="text/javascript"><!--
-            <?php echo $giftd_js_code ?>
+            <?php echo htmlspecialchars_decode($giftd_js_code) ?>
             //--></script>]]></add>
         </operation>
     </file>
@@ -221,7 +224,7 @@
         <operation >
             <search ><![CDATA[if (!empty($this->request->post['quantity'])) {]]></search>
             <add position="before"><![CDATA[if(isset($this->request->post['voucher']) && (strripos($this->request->post['voucher'], $this->config->get('giftd_prefix')) !== false)){
-                 $this->load->model('total/voucher');
+                 $this->load->model('extension/total/voucher');
 
                 $giftd_data = file_get_contents('http://api.giftd.ru/v1/gift/check?token=' . $this->request->post['voucher'] . '&api_key=' . $this->config->get('giftd_api_key'));
                 $giftd_data = json_decode($giftd_data);
@@ -282,7 +285,7 @@
                         
                         
                         
-                        $this->load->model('total/voucher');
+                        $this->load->model('extension/total/voucher');
                         
                         unset($this->session->data['voucher']);
                         unset($this->session->data['proverka']);
